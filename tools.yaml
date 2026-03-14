@@ -1,0 +1,83 @@
+# ============================================================
+# Juubi — tools.yaml
+# Only non-redundant passive tools with unique source coverage.
+#
+# Source coverage summary:
+#   subfinder        → 46 sources (backbone)
+#   amass            → 15 unique sources
+#   bbot             → 25 unique sources (free + key + code)
+#   theHarvester     → 6 unique (search engines + LinkedIn)
+#   github-subdomains → unique token-based GitHub code search
+#   gitlab-subdomains → unique token-based GitLab code search
+#
+# {target}       → replaced with domain at runtime
+# {github_token} → injected from ~/.config/juubi/keys.yaml
+# {gitlab_token} → injected from ~/.config/juubi/keys.yaml
+# ============================================================
+
+settings:
+  output_dir: "./output"
+  timeout:    300        # seconds per tool before kill
+  threads:    50
+  resolvers:  "./resolvers.txt"
+  wordlist:   "./wordlists/subdomains.txt"
+
+tools:
+
+  # ──────────────────────────────────────────
+  # PASSIVE OSINT
+  # ──────────────────────────────────────────
+
+  - name:          subfinder
+    category:      passive
+    binary:        subfinder
+    flags:         "-d {target} -silent -all"
+    output_format: text
+    install:       "go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"
+    enabled:       true
+    note:          "46 sources — backbone of passive recon. Keys auto-injected via env vars."
+
+  - name:          amass
+    category:      passive
+    binary:        amass
+    flags:         "enum -passive -d {target} -silent"
+    output_format: text
+    install:       "go install -v github.com/owasp-amass/amass/v4/...@master"
+    enabled:       true
+    note:          "15 unique sources not covered by subfinder: 360passivedns, ahrefs, bigdatacloud, builtwith, certcentral, circl, detectify, hunter, ipdata, ipinfo, pentesttools, publicwww, urlscan, yandex, zetalytics"
+
+  - name:          bbot
+    category:      passive
+    binary:        bbot
+    flags:         "-t {target} -f subdomain-enum -rf passive -y --silent -o {output_dir}"
+    output_format: text
+    install:       "pipx install bbot"
+    enabled:       true
+    note:          "25 unique sources: bufferoverrun, dnscommonsrv, dnsdumpster, emailformat, myssl, otx, pgp, skymem, subdomainradar, viewdns, wayback (free) + credshed, dehashed, hunterio, ip2location, ipstack (key) + apkpure, docker, dockerhub, github_org, github_usersearch, github_workflows, gitlab_onprem, google_playstore, postman (code)"
+
+  - name:          theHarvester
+    category:      passive
+    binary:        theHarvester
+    flags:         "-d {target} -b anubis,crtsh,dnsdumpster,hackertarget,rapiddns,sublist3r,threatminer,urlscan,bing,baidu,yahoo,google"
+    output_format: text
+    install:       "pipx install theHarvester"
+    enabled:       true
+    note:          "6 unique sources: baidu, bing, google, linkedin, sublist3r, yahoo — search engine scraping, no other tool does this"
+
+  - name:          github-subdomains
+    category:      passive
+    binary:        github-subdomains
+    flags:         "-d {target} -t {github_token} -o /dev/stdout"
+    output_format: text
+    install:       "go install -v github.com/gwen001/github-subdomains@latest"
+    enabled:       false
+    note:          "Unique — finds subdomains leaked in public GitHub repos/configs/code. Requires GITHUB_TOKEN in keys.yaml"
+
+  - name:          gitlab-subdomains
+    category:      passive
+    binary:        gitlab-subdomains
+    flags:         "-d {target} -t {gitlab_token} -o /dev/stdout"
+    output_format: text
+    install:       "go install -v github.com/gwen001/gitlab-subdomains@latest"
+    enabled:       false
+    note:          "Unique — finds subdomains leaked in public GitLab repos. Requires GITLAB_TOKEN in keys.yaml"
